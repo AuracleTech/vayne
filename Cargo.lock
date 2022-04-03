@@ -406,12 +406,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "certbot"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c1cab00627f7c2163e270c48aed38e8393148c4f2e92b2b081709cc94118756"
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1392,7 +1386,6 @@ dependencies = [
  "actix-files",
  "actix-web",
  "actix-web-lab",
- "certbot",
  "env_logger",
  "log",
  "rustls",

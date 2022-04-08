@@ -5,7 +5,7 @@ use actix_web::{
 };
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use std::{fs::File, io::BufReader};
+use std::{env, fs::File, io::BufReader};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -13,9 +13,11 @@ async fn main() -> std::io::Result<()> {
     let config = load_rustls_config();
     log::info!("Starting HTTPS server");
     HttpServer::new(|| {
+        let env_root = env::var("VAYNE_ROOT").expect("Environment variable VAYNE_ROOT missing");
+        let env_dns = env::var("VAYNE_DNS").expect("Environment variable VAYNE_DNS missing");
         App::new().wrap(middleware::Logger::default()).service(
             web::scope("")
-                .service(Files::new("/", "C:/www").index_file("index.html"))
+                .service(Files::new("/", env_root).index_file("index.html"))
                 .wrap(
                     DefaultHeaders::new()
                         .add((
@@ -24,12 +26,16 @@ async fn main() -> std::io::Result<()> {
                         ))
                         .add((
                             "Content-Security-Policy",
-                            "frame-ancestors 'self' https://codehive.app",
+                            format!(
+                                "frame-ancestors 'self' https://{} https://www.{}",
+                                env_dns, env_dns
+                            ),
                         ))
                         .add(("X-Frame-Options", "deny"))
                         .add(("X-Content-Type-Options", "nosniff"))
                         .add(("Referrer-Policy", "no-referrer"))
-                        .add(("Permissions-Policy", "geolocation=*, fullscreen=()")),
+                        .add(("Permissions-Policy", "geolocation=*, fullscreen=()"))
+                        .add(("X-XSS-Protection", "1; mode=block")),
                 ),
         )
     })
@@ -43,20 +49,25 @@ fn load_rustls_config() -> ServerConfig {
         .with_safe_defaults()
         .with_no_client_auth();
 
-    let cert_file = File::open("C:\\Certbot\\live\\codehive.app\\cert.pem")
-        .expect("Could not open certificate file");
-    let key_file = File::open("C:\\Certbot\\live\\codehive.app\\privkey.pem")
-        .expect("Could not open private key file");
+    let env_cert = env::var("VAYNE_CERT").expect("Environment variable VAYNE_CERT missing");
+    let cert_file = File::open(env_cert).expect("Could not open certificate file");
+    let cert_reader = &mut BufReader::new(cert_file);
 
-    let cert_buf = &mut BufReader::new(cert_file);
-    let key_buf = &mut BufReader::new(key_file);
+    let env_key = env::var("VAYNE_KEY").expect("Environment variable VAYNE_KEY missing");
+    let key_file = File::open(env_key).expect("Could not open private key file");
+    let key_reader = &mut BufReader::new(key_file);
 
-    let cert_chain = certs(cert_buf)
-        .expect("Failed to load certificate chain")
-        .into_iter()
-        .map(Certificate)
-        .collect();
-    let mut keys: Vec<PrivateKey> = pkcs8_private_keys(key_buf)
+    let env_chain = env::var("VAYNE_CHAIN").expect("Environment variable VAYNE_CHAIN missing");
+    let chain_file = File::open(env_chain).expect("Could not open certificate chain file");
+    let chain_reader = &mut BufReader::new(chain_file);
+
+    let mut all_certs = Vec::new();
+    all_certs.extend(certs(cert_reader).expect("Could not read certificate"));
+    all_certs.extend(certs(chain_reader).expect("Could not read certificate chain"));
+
+    let all_certs = all_certs.into_iter().map(Certificate).collect();
+
+    let mut keys: Vec<PrivateKey> = pkcs8_private_keys(key_reader)
         .expect("Failed to load private key")
         .into_iter()
         .map(PrivateKey)
@@ -68,6 +79,6 @@ fn load_rustls_config() -> ServerConfig {
     }
 
     config
-        .with_single_cert(cert_chain, keys.remove(0))
+        .with_single_cert(all_certs, keys.remove(0))
         .expect("Failed to load certificate")
 }

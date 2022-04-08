@@ -12,6 +12,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
     let config = load_rustls_config();
     log::info!("Starting HTTPS server");
+    let env_port = env::var("VAYNE_PORT").expect("Environment variable VAYNE_PORT missing");
     HttpServer::new(|| {
         let env_root = env::var("VAYNE_ROOT").expect("Environment variable VAYNE_ROOT missing");
         let env_dns = env::var("VAYNE_DNS").expect("Environment variable VAYNE_DNS missing");
@@ -39,7 +40,7 @@ async fn main() -> std::io::Result<()> {
                 ),
         )
     })
-    .bind_rustls("0.0.0.0:443", config)?
+    .bind_rustls(format!("0.0.0.0:{}", env_port), config)?
     .run()
     .await
 }

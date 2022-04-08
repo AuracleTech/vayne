@@ -24,7 +24,7 @@ async fn main() -> std::io::Result<()> {
                         ))
                         .add((
                             "Content-Security-Policy",
-                            "frame-ancestors 'self' https://auracle.tk https://www.auracle.tk",
+                            "frame-ancestors 'self' https://codehive.app",
                         ))
                         .add(("X-Frame-Options", "deny"))
                         .add(("X-Content-Type-Options", "nosniff"))
@@ -43,9 +43,9 @@ fn load_rustls_config() -> ServerConfig {
         .with_safe_defaults()
         .with_no_client_auth();
 
-    let cert_file = File::open("C:\\Certbot\\live\\auracle.tk\\cert.pem")
+    let cert_file = File::open("C:\\Certbot\\live\\codehive.app\\cert.pem")
         .expect("Could not open certificate file");
-    let key_file = File::open("C:\\Certbot\\live\\auracle.tk\\privkey.pem")
+    let key_file = File::open("C:\\Certbot\\live\\codehive.app\\privkey.pem")
         .expect("Could not open private key file");
 
     let cert_buf = &mut BufReader::new(cert_file);
